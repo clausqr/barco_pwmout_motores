@@ -104,6 +104,7 @@ void subscription_callback(const void * msgin)
 
 void setup() 
 {
+  Serial.begin(115200);
 
   // Allow allocation of all timers
 	ESP32PWM::allocateTimer(0);
@@ -124,18 +125,21 @@ void setup()
   mot4.attach(PWM4_OUT_PIN, 1000, 2000);
 
 	
-  IPAddress agent_ip(192, 168, 0, 1);
+  IPAddress agent_ip(10, 42, 0, 1);
   size_t agent_port = 8888;
 
+  Serial.print("Setting up Micro-ROS WiFi transport...");
   set_microros_wifi_transports(ssid, psk, agent_ip, agent_port);
+  Serial.println("OK");
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
 
   delay(2000);
 
-  Serial.begin(115200);
 
+  Serial.println("Starting Micro-ROS WiFi node...");
+  
   allocator = rcl_get_default_allocator();
 
   //create init_options
@@ -157,6 +161,7 @@ void setup()
 
   // Add subscriber to executor
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
+
 
 
 
