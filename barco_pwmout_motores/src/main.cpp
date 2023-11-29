@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ESP32Servo.h>
 
 #include "secrets.h"
 
@@ -20,15 +21,18 @@
 #error This example is only available for Arduino Portenta, Arduino Nano RP2040 Connect, ESP32 Dev module and Wio Terminal
 #endif
 
+// Recommended PWM GPIO pins on the ESP32 include 2,4,12-19,21-23,25-27,32-33 
 
-#define PWM_OUT_PIN GPIO_NUM_17
-#define PWM_OUT_FORW GPIO_NUM_16
-#define PWM_OUT_BACK GPIO_NUM_4
 
-#define PWM2_OUT_PIN GPIO_NUM_15
-#define PWM2_OUT_FORW GPIO_NUM_2
-#define PWM2_OUT_BACK GPIO_NUM_0
+#define PWM1_OUT_PIN GPIO_NUM_12
+#define PWM2_OUT_PIN GPIO_NUM_13
+#define PWM3_OUT_PIN GPIO_NUM_14
+#define PWM4_OUT_PIN GPIO_NUM_15
 
+Servo mot1;
+Servo mot2;
+Servo mot3;
+Servo mot4;
 
 rcl_publisher_t publisher;
 std_msgs__msg__Int32 msg;
@@ -46,12 +50,6 @@ const char * topic_name = "pwm_out";
 
 
 const rosidl_message_type_support_t * type_support = ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float64);
-
-
-// pwm setup
-  int channel = 0;
-  int resolution = 8;
-  int frequency = 200;
 
 #define LED_PIN 13
 
@@ -94,32 +92,39 @@ void subscription_callback(const void * msgin)
   {
     pwm_float = -1.0;
   }
-  int pwm = (int)(abs(pwm_float*255.0));
-  Serial.print("int pwm = ");
-  Serial.print(pwm);
+  int pwm_us = (int)(abs(pwm_float*500.0+1500.0));
+  Serial.print("int pwm_us = ");
+  Serial.print(pwm_us);
   Serial.println(" ");
-  ledcWrite(channel, pwm);
-  if (pwm_float > 0)
-  {
-    digitalWrite(PWM_OUT_FORW, HIGH);
-    digitalWrite(PWM_OUT_BACK, LOW);
-
-    digitalWrite(PWM2_OUT_FORW, HIGH);
-    digitalWrite(PWM2_OUT_BACK, LOW);
-  }
-  else
-  {
-    digitalWrite(PWM_OUT_FORW, LOW);
-    digitalWrite(PWM_OUT_BACK, HIGH);
-
-    digitalWrite(PWM2_OUT_FORW, LOW);
-    digitalWrite(PWM2_OUT_BACK, HIGH);
-  }
+  mot1.writeMicroseconds(pwm_us);
+  mot2.writeMicroseconds(pwm_us);
+  mot3.writeMicroseconds(pwm_us);
+  mot4.writeMicroseconds(pwm_us);
 }
 
 void setup() 
 {
-  IPAddress agent_ip(192, 168, 0, 136);
+
+  // Allow allocation of all timers
+	ESP32PWM::allocateTimer(0);
+	ESP32PWM::allocateTimer(1);
+	ESP32PWM::allocateTimer(2);
+	ESP32PWM::allocateTimer(3);
+	// standard 50 hz servo
+  mot1.setPeriodHertz(50);
+  mot2.setPeriodHertz(50);
+  mot3.setPeriodHertz(50);
+  mot4.setPeriodHertz(50);
+
+  // attach servos to pins
+  // using default min/max of 1000us and 2000us
+  mot1.attach(PWM1_OUT_PIN, 1000, 2000);
+  mot2.attach(PWM2_OUT_PIN, 1000, 2000);
+  mot3.attach(PWM3_OUT_PIN, 1000, 2000);
+  mot4.attach(PWM4_OUT_PIN, 1000, 2000);
+
+	
+  IPAddress agent_ip(192, 168, 0, 1);
   size_t agent_port = 8888;
 
   set_microros_wifi_transports(ssid, psk, agent_ip, agent_port);
@@ -153,27 +158,7 @@ void setup()
   // Add subscriber to executor
   RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
 
-  // prepare for pwm output
 
-  pinMode(PWM_OUT_FORW, OUTPUT);
-  pinMode(PWM_OUT_BACK, OUTPUT);
-
-  pinMode(PWM2_OUT_FORW, OUTPUT);
-  pinMode(PWM2_OUT_BACK, OUTPUT);
-
-  pinMode(PWM_OUT_PIN, OUTPUT);
-  ledcSetup(channel, frequency, resolution);
-  ledcAttachPin(PWM_OUT_PIN, channel);
-
-  pinMode(PWM2_OUT_PIN, OUTPUT);
-  ledcSetup(channel, frequency, resolution);
-  ledcAttachPin(PWM2_OUT_PIN, channel);
-
-  ledcWrite(channel, 0);
-  delay(1000);
-  ledcWrite(channel, 255);
-  delay(1000);
-  ledcWrite(channel, 127);
 
 }
 
