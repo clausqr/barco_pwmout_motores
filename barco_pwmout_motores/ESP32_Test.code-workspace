@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "barco_pwmout_motores",
+			"path": "."
+		}
+	],
+	"settings": {}
+}
